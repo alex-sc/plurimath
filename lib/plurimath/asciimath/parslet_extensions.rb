@@ -12,11 +12,11 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
   def initialize(*alternatives)
     super()
 
+    # Order alternatives by min_length desc
+    # TODO: safe?
+    alternatives.sort_by! { |alt| -alt.min_length }
+    @min_len = alternatives.last.min_length
     @alternatives = alternatives
-    @min_len = 100
-    @alternatives.each { |parslet|
-      @min_len = [@min_len, parslet.min_length].min
-    }
   end
 
   def min_length
@@ -40,17 +40,11 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
 end
 
 class Parslet::Atoms::Sequence < Parslet::Atoms::Base
-  attr_reader :parslets, :min_len
-
   def initialize(*parslets)
     super()
 
     @parslets = parslets
-
-    @min_len = 0
-    parslets.each { |parslet|
-      @min_len += parslet.min_length
-    }
+    @min_len = parslets.map(&:min_length).sum
   end
 
   def min_length
@@ -72,12 +66,15 @@ end
 
 class Parslet::Atoms::Repetition < Parslet::Atoms::Base
   def min_length
+    return 0 if @min == 0
     @parslet.min_length * @min
   end
 end
 
 class Parslet::Atoms::Re < Parslet::Atoms::Base
   def min_length
+    # TODO: is zero possible?
+    # TODO?: we could try to detect if an expression requires > 1 symbol, but it's too much effort
     1
   end
 end
@@ -87,7 +84,6 @@ class Parslet::Atoms::Dynamic < Parslet::Atoms::Base
     0
   end
 end
-
 
 class Parslet::Atoms::Capture < Parslet::Atoms::Base
   def min_length
