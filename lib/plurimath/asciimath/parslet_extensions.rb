@@ -1,0 +1,96 @@
+require "parslet"
+
+class Parslet::Atoms::Base
+  def min_length
+    puts "min_length must be implemented in #{self.class}"
+    exit!
+  end
+end
+
+class Parslet::Atoms::Alternative < Parslet::Atoms::Base
+
+  def initialize(*alternatives)
+    super()
+
+    @alternatives = alternatives
+    @min_len = 100
+    @alternatives.each { |parslet|
+      @min_len = [@min_len, parslet.min_length].min
+    }
+  end
+
+  def min_length
+    @min_len
+  end
+
+  def try(source, context, consume_all)
+    errors = alternatives.map { |a|
+      next if source.chars_left < a.min_length
+
+      success, value = result = a.apply(source, context, consume_all)
+      return result if success
+
+      # Aggregate all errors
+      value
+    }
+
+    # If we reach this point, all alternatives have failed.
+    context.err(self, source, error_msg, errors)
+  end
+end
+
+class Parslet::Atoms::Sequence < Parslet::Atoms::Base
+  attr_reader :parslets, :min_len
+
+  def initialize(*parslets)
+    super()
+
+    @parslets = parslets
+
+    @min_len = 0
+    parslets.each { |parslet|
+      @min_len += parslet.min_length
+    }
+  end
+
+  def min_length
+    @min_len
+  end
+end
+
+class Parslet::Atoms::Str < Parslet::Atoms::Base
+  def min_length
+    @len
+  end
+end
+
+class Parslet::Atoms::Named < Parslet::Atoms::Base
+  def min_length
+    @parslet.min_length
+  end
+end
+
+class Parslet::Atoms::Repetition < Parslet::Atoms::Base
+  def min_length
+    @parslet.min_length * @min
+  end
+end
+
+class Parslet::Atoms::Re < Parslet::Atoms::Base
+  def min_length
+    1
+  end
+end
+
+class Parslet::Atoms::Dynamic < Parslet::Atoms::Base
+  def min_length
+    0
+  end
+end
+
+
+class Parslet::Atoms::Capture < Parslet::Atoms::Base
+  def min_length
+    0
+  end
+end
