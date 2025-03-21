@@ -24,6 +24,9 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
 
   def try(source, context, consume_all)
     alternatives.map { |a|
+      # Instead of entering the more expensive apply() method,
+      # we attempt to look ahead and continue to the next alternative if there's no match
+      # The `Constants.precompile_constants` alternative has over 3k options
       next unless a.lookahead(source)
       #puts "Trying out of #{alternatives.length}, min=#{a.min_length}"
 
@@ -33,6 +36,21 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
 
     # If we reach this point, all alternatives have failed.
     context.err(self, source, error_msg)
+  end
+
+  precedence ALTERNATE
+  def to_s_inner(prec)
+    # Don't dump all the alnernatives, it takes too much time
+    limit = 5
+    items = alternatives.first(limit)
+                        .map { |a| "#{a.class}[#{a.to_s(prec).gsub("\n", " ")}]" }
+                        .join(' / ')
+
+    if alternatives.size > limit
+      items += " and (#{alternatives.size - limit}) more"
+    end
+
+    items
   end
 end
 
@@ -63,7 +81,9 @@ end
 
 class Parslet::Atoms::Re < Parslet::Atoms::Base
   def lookahead(source)
-    source.lookahead(@re)
+    # TODO: regression on "jcgm example #4"
+    #source.lookahead(@re)
+    true
   end
 end
 
@@ -83,7 +103,9 @@ end
 
 class Parslet::Atoms::Entity < Parslet::Atoms::Base
   def lookahead(source)
-    @parslet.lookahead(source) if @parslet
+    # TODO: contains latex equation #171
+    # ret = parslet.lookahead(source)
+    # ret if ret != nil
     true
   end
 end
