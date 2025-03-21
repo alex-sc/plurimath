@@ -2,7 +2,7 @@ require "parslet"
 
 module Parslet
   class Source
-    def lookahead(pattern)
+    def lookahead?(pattern)
       # puts "Check #{pattern} vs #{@orig_str[@str.rest_size..]}"
       @str.match?(pattern)
     end
@@ -10,14 +10,14 @@ module Parslet
 end
 
 class Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     puts "lookahead must be implemented in #{self.class}"
     exit!
   end
 end
 
 class Parslet::Atoms::Alternative < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     # We need to stop the recursive lookahead at some point, otherwise it might go too deep
     true
   end
@@ -27,7 +27,7 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
       # Instead of entering the more expensive apply() method,
       # we attempt to look ahead and continue to the next alternative if there's no match
       # The `Constants.precompile_constants` alternative has over 3k options
-      next unless a.lookahead(source)
+      next unless a.lookahead?(source)
       #puts "Trying out of #{alternatives.length}, min=#{a.min_length}"
 
       success, _ = result = a.apply(source, context, consume_all)
@@ -55,32 +55,34 @@ class Parslet::Atoms::Alternative < Parslet::Atoms::Base
 end
 
 class Parslet::Atoms::Sequence < Parslet::Atoms::Base
-  def lookahead(source)
-    parslets[0].lookahead(source)
+  def lookahead?(source)
+    parslets[0].lookahead?(source)
   end
 end
 
 class Parslet::Atoms::Str < Parslet::Atoms::Base
-  def lookahead(source)
-    source.lookahead(@pat)
+  def lookahead?(source)
+    source.lookahead?(@pat)
   end
 end
 
 class Parslet::Atoms::Named < Parslet::Atoms::Base
-  def lookahead(source)
-    parslet.lookahead(source)
+  def lookahead?(source)
+    parslet.lookahead?(source)
   end
 end
 
 class Parslet::Atoms::Repetition < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     true if @min == 0
-    parslet.lookahead(source)
+    # TODO: contains latex equation #171
+    # parslet.lookahead?(source)
+    true
   end
 end
 
 class Parslet::Atoms::Re < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     # TODO: regression on "jcgm example #4"
     #source.lookahead(@re)
     true
@@ -88,21 +90,21 @@ class Parslet::Atoms::Re < Parslet::Atoms::Base
 end
 
 class Parslet::Atoms::Dynamic < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     # TODO?
     true
   end
 end
 
 class Parslet::Atoms::Capture < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     # TODO?
     true
   end
 end
 
 class Parslet::Atoms::Entity < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     # TODO: contains latex equation #171
     # ret = parslet.lookahead(source)
     # ret if ret != nil
@@ -111,7 +113,7 @@ class Parslet::Atoms::Entity < Parslet::Atoms::Base
 end
 
 class Parslet::Atoms::Lookahead < Parslet::Atoms::Base
-  def lookahead(source)
+  def lookahead?(source)
     true
   end
 end
